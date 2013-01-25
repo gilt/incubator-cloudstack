@@ -314,7 +314,7 @@ public class LibvirtComputingResource extends ServerResourceBase implements
                     + "            <uuid>{1}</uuid>" + "        </domain>"
                     + "    </domainsnapshot>");
 
-    protected String _hypervisorType;
+    protected HypervisorType _hypervisorType;
     protected String _hypervisorURI;
     protected String _hypervisorPath;
     protected String _sysvmISOPath;
@@ -569,15 +569,20 @@ public class LibvirtComputingResource extends ServerResourceBase implements
 
         String instance = (String) params.get("instance");
 
-        _hypervisorType = (String) params.get("hypervisor.type");
-        if (_hypervisorType == null) {
-            _hypervisorType = "kvm";
+        _hypervisorType = HypervisorType.getType((String) params.get("hypervisor.type"));
+        if (_hypervisorType == HypervisorType.None) {
+            _hypervisorType = HypervisorType.KVM;
         }
 
         _hypervisorURI = (String) params.get("hypervisor.uri");
         if (_hypervisorURI == null) {
-            _hypervisorURI = "qemu:///system";
+            if (HypervisorType.LXC == _hypervisorType) {
+                _hypervisorURI = "lxc:///";
+            } else {
+                _hypervisorURI = "qemu:///system";
+            }
         }
+
         String startMac = (String) params.get("private.macaddr.start");
         if (startMac == null) {
             startMac = "00:16:3e:77:e2:a0";
@@ -656,12 +661,14 @@ public class LibvirtComputingResource extends ServerResourceBase implements
             throw new CloudRuntimeException(e.getMessage());
         }
 
-        /* Does node support HVM guest? If not, exit */
-        if (!IsHVMEnabled(conn)) {
-            throw new ConfigurationException(
-                    "NO HVM support on this machine, please make sure: "
-                            + "1. VT/SVM is supported by your CPU, or is enabled in BIOS. "
-                            + "2. kvm modules are loaded (kvm, kvm_amd|kvm_intel)");
+        if (HypervisorType.KVM == _hypervisorType) {
+            /* Does node support HVM guest? If not, exit */
+            if (!IsHVMEnabled(conn)) {
+                throw new ConfigurationException(
+                        "NO HVM support on this machine, please make sure: "
+                                + "1. VT/SVM is supported by your CPU, or is enabled in BIOS. "
+                                + "2. kvm modules are loaded (kvm, kvm_amd|kvm_intel)");
+            }
         }
 
         _hypervisorPath = getHypervisorPath(conn);
@@ -2799,14 +2806,19 @@ public class LibvirtComputingResource extends ServerResourceBase implements
 
     protected LibvirtVMDef createVMFromSpec(VirtualMachineTO vmTO) {
         LibvirtVMDef vm = new LibvirtVMDef();
-        vm.setHvsType(_hypervisorType);
+        vm.setHvsType(_hypervisorType.toString().toLowerCase());
         vm.setDomainName(vmTO.getName());
         vm.setDomUUID(UUID.nameUUIDFromBytes(vmTO.getName().getBytes())
                 .toString());
         vm.setDomDescription(vmTO.getOs());
 
         GuestDef guest = new GuestDef();
-        guest.setGuestType(GuestDef.guestType.KVM);
+
+        if (HypervisorType.LXC == _hypervisorType) {
+            guest.setGuestType(GuestDef.guestType.LXC);
+        } else {
+            guest.setGuestType(GuestDef.guestType.KVM);
+        }
         guest.setGuestArch(vmTO.getArch());
         guest.setMachineType("pc");
         guest.setBootOrder(GuestDef.bootOrder.CDROM);
@@ -2846,18 +2858,34 @@ public class LibvirtComputingResource extends ServerResourceBase implements
         DevicesDef devices = new DevicesDef();
         devices.setEmulatorPath(_hypervisorPath);
 
+        if (guest.getGuestType() == GuestDef.guestType.LXC) {
+            for (VolumeTO volume : vmTO.getDisks()) {
+                if (volume.getType() == Volume.Type.ROOT) {
+
+                    KVMStoragePool pool = _storagePoolMgr.getStoragePool(
+                            volume.getPoolType(),
+                            volume.getPoolUuid());
+                    KVMPhysicalDisk physicalDisk = pool.getPhysicalDisk(volume.getPath());
+                    devices.setRootFilesystemPath(physicalDisk.getPath());
+                    break;
+                }
+            }
+        }
+
         SerialDef serial = new SerialDef("pty", null, (short) 0);
         devices.addDevice(serial);
 
         ConsoleDef console = new ConsoleDef("pty", null, null, (short) 0);
         devices.addDevice(console);
 
-        GraphicDef grap = new GraphicDef("vnc", (short) 0, true, vmTO.getVncAddr(), null,
-                null);
-        devices.addDevice(grap);
+        if (guest.getGuestType() != GuestDef.guestType.LXC) {
+            GraphicDef grap = new GraphicDef("vnc", (short) 0, true, vmTO.getVncAddr(), null,
+                    null);
+            devices.addDevice(grap);
 
-        InputDef input = new InputDef("tablet", "usb");
-        devices.addDevice(input);
+            InputDef input = new InputDef("tablet", "usb");
+            devices.addDevice(input);
+        }
 
         vm.addComp(devices);
 
@@ -2958,7 +2986,7 @@ public class LibvirtComputingResource extends ServerResourceBase implements
                 return arg0.getDeviceId() > arg1.getDeviceId() ? 1 : -1;
             }
         });
-        
+
         for (VolumeTO volume : disks) {
             KVMPhysicalDisk physicalDisk = null;
             KVMStoragePool pool = null;
@@ -3011,11 +3039,11 @@ public class LibvirtComputingResource extends ServerResourceBase implements
                          disk.defFileBasedDisk(physicalDisk.getPath(), devId,
                          DiskDef.diskBus.VIRTIO,
                          DiskDef.diskFmtType.QCOW2);
-                } else {
-                    disk.defFileBasedDisk(physicalDisk.getPath(), devId, diskBusType, DiskDef.diskFmtType.QCOW2);
-                }
+                    } else {
+                        disk.defFileBasedDisk(physicalDisk.getPath(), devId, diskBusType, DiskDef.diskFmtType.QCOW2);
+                    }
 
-            }
+                }
 
             }
 
@@ -3326,7 +3354,7 @@ public class LibvirtComputingResource extends ServerResourceBase implements
 
         final StartupRoutingCommand cmd = new StartupRoutingCommand(
                 (Integer) info.get(0), (Long) info.get(1), (Long) info.get(2),
-                (Long) info.get(4), (String) info.get(3), HypervisorType.KVM,
+                (Long) info.get(4), (String) info.get(3), _hypervisorType,
                 RouterPrivateIpStrategy.HostLocal);
         cmd.setStateChanges(changes);
         fillNetworkInformation(cmd);
@@ -4242,7 +4270,7 @@ public class LibvirtComputingResource extends ServerResourceBase implements
         }
 
         List<InterfaceDef> intfs = getInterfaces(conn, vmName);
-        if (intfs.size() < nic.getDeviceId()) {
+        if (intfs.size() == 0 || intfs.size() < nic.getDeviceId()) {
             return false;
         }
 

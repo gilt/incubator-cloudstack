@@ -1502,8 +1502,10 @@ public class VirtualNetworkApplianceManagerImpl implements VirtualNetworkApplian
                     DomainRouterVO router = deployRouter(owner, destination, plan, params, isRedundant, vrProvider, offeringId,
                             null, networks, false, null);
 
-                    _routerDao.addRouterToGuestNetwork(router, guestNetwork);
-                    routers.add(router);
+                    if (router != null) {
+                        _routerDao.addRouterToGuestNetwork(router, guestNetwork);
+                        routers.add(router);
+                    }
                 }
             }
         } finally {

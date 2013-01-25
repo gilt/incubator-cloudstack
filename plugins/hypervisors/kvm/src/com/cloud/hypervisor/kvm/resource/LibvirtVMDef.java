@@ -31,7 +31,7 @@ public class LibvirtVMDef {
 
     public static class GuestDef {
         enum guestType {
-            KVM, XEN, EXE
+            KVM, XEN, EXE, LXC
         }
 
         enum bootOrder {
@@ -60,6 +60,10 @@ public class LibvirtVMDef {
 
         public void setGuestType(guestType type) {
             _type = type;
+        }
+
+        public guestType getGuestType() {
+            return _type;
         }
 
         public void setGuestArch(String arch) {
@@ -106,8 +110,16 @@ public class LibvirtVMDef {
                 }
                 guestDef.append("</os>\n");
                 return guestDef.toString();
-            } else
+            } else if (_type == guestType.LXC) {
+                StringBuilder guestDef = new StringBuilder();
+                guestDef.append("<os>\n");
+                guestDef.append("<type>exe</type>\n");
+                guestDef.append("<init>/sbin/init</init>\n");
+                guestDef.append("</os>\n");
+                return guestDef.toString();
+             } else {
                 return null;
+            }
         }
     }
 
@@ -271,6 +283,7 @@ public class LibvirtVMDef {
 
     public static class DevicesDef {
         private String _emulator;
+        private String _rootFilesystemPath;
         private final Map<String, List<?>> devices = new HashMap<String, List<?>>();
 
         public boolean addDevice(Object device) {
@@ -290,6 +303,10 @@ public class LibvirtVMDef {
             _emulator = emulator;
         }
 
+        public void setRootFilesystemPath(String rootFilesystemPath) {
+            _rootFilesystemPath = rootFilesystemPath;
+        }
+
         @Override
         public String toString() {
             StringBuilder devicesBuilder = new StringBuilder();
@@ -297,6 +314,13 @@ public class LibvirtVMDef {
             if (_emulator != null) {
                 devicesBuilder.append("<emulator>" + _emulator
                         + "</emulator>\n");
+            }
+
+            if (_rootFilesystemPath != null) {
+                devicesBuilder.append("<filesystem type='mount'>\n");
+                devicesBuilder.append("  <source dir='" + _rootFilesystemPath + "'/>\n");
+                devicesBuilder.append("  <target dir='/'/>\n");
+                devicesBuilder.append("</filesystem>\n");
             }
 
             for (List<?> devs : devices.values()) {
