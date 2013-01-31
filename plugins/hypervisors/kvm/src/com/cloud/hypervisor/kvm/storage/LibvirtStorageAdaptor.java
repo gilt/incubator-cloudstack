@@ -412,6 +412,8 @@ public class LibvirtStorageAdaptor implements StorageAdaptor {
                 File diskDir = new File(disk.getPath());
                 if (diskDir.exists() && diskDir.isDirectory()) {
                     disk.setFormat(PhysicalDiskFormat.DIR);
+                } else if (volumeUuid.endsWith("tar") || volumeUuid.endsWith(("TAR"))) {
+                    disk.setFormat(PhysicalDiskFormat.TAR);
                 } else {
                     disk.setFormat(pool.getDefaultFormat());
                 }
@@ -602,6 +604,7 @@ public class LibvirtStorageAdaptor implements StorageAdaptor {
                 Script.runSimpleBashScript("tar -x -f " + template.getPath() + " -C " + disk.getPath());
             } else if (template.getFormat() == PhysicalDiskFormat.DIR) {
                 Script.runSimpleBashScript("mkdir -p " + disk.getPath());
+                Script.runSimpleBashScript("chmod 755 " + disk.getPath());
                 Script.runSimpleBashScript("cp -p -r " + template.getPath() + "/* " + disk.getPath());
             } else if (format == PhysicalDiskFormat.QCOW2) {
                 Script.runSimpleBashScript("qemu-img create -f "
@@ -711,6 +714,7 @@ public class LibvirtStorageAdaptor implements StorageAdaptor {
 
             } else if (sourceFormat == PhysicalDiskFormat.DIR) {
                 Script.runSimpleBashScript("mkdir -p " + destPath);
+                Script.runSimpleBashScript("chmod 755 " + destPath);
                 Script.runSimpleBashScript("cp -p -r " + sourcePath + "/* " + destPath);
 
             } else if (sourceFormat.equals(destFormat) &&
