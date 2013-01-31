@@ -13,4 +13,4 @@ UPDATE configuration SET value='KVM,XenServer,VMware,BareMetal,Ovm,LXC' WHERE na
 
 -- template builtin for lxc
 INSERT INTO `cloud`.`vm_template` (id, unique_name, name, public, created, type, hvm, bits, account_id, url, checksum, display_text, enable_password, format, guest_os_id, featured, cross_zones, hypervisor_type, extractable)
-    VALUES (10, 'centos63-x86_64-gilt', 'CentOS 6.3(64-bit) no GUI (LXC)', 1, now(), 'BUILTIN', 0, 64, 1, 'https://s3.amazonaws.com/pnguyen/public/centos63.tar.gz', '4928c590590a11e2bcfd0800200c9a66', 'CentOS 6.3(64-bit) Gilt (LXC)', 0, 'TAR', 112, 1, 1, 'LXC', 1);
+    VALUES (10, 'centos63-x86_64-gilt', 'CentOS 6.3(64-bit) no GUI (LXC)', 1, now(), 'BUILTIN', 0, 64, 1, 'http://s3.amazonaws.com/pnguyen/public/centos63.tar.gz', '4928c590590a11e2bcfd0800200c9a66', 'CentOS 6.3(64-bit) Gilt (LXC)', 0, 'TAR', 112, 1, 1, 'LXC', 1);
