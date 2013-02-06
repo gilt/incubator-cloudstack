@@ -284,6 +284,7 @@ public class LibvirtVMDef {
     public static class DevicesDef {
         private String _emulator;
         private String _rootFilesystemPath;
+        private GuestDef.guestType _guestType;
         private final Map<String, List<?>> devices = new HashMap<String, List<?>>();
 
         public boolean addDevice(Object device) {
@@ -307,6 +308,10 @@ public class LibvirtVMDef {
             _rootFilesystemPath = rootFilesystemPath;
         }
 
+        public void setGuestType(GuestDef.guestType guestType) {
+            _guestType = guestType;
+        }
+
         @Override
         public String toString() {
             StringBuilder devicesBuilder = new StringBuilder();
@@ -325,6 +330,13 @@ public class LibvirtVMDef {
 
             for (List<?> devs : devices.values()) {
                 for (Object dev : devs) {
+                    if (_guestType == GuestDef.guestType.LXC) {
+                        if (dev instanceof GraphicDef ||
+                            dev instanceof InputDef ||
+                            dev instanceof DiskDef) {
+                            continue;
+                        }
+                    }
                     devicesBuilder.append(dev.toString());
                 }
             }

@@ -2857,6 +2857,7 @@ public class LibvirtComputingResource extends ServerResourceBase implements
 
         DevicesDef devices = new DevicesDef();
         devices.setEmulatorPath(_hypervisorPath);
+        devices.setGuestType(guest.getGuestType());
 
         if (guest.getGuestType() == GuestDef.guestType.LXC) {
             for (VolumeTO volume : vmTO.getDisks()) {
@@ -2878,14 +2879,11 @@ public class LibvirtComputingResource extends ServerResourceBase implements
         ConsoleDef console = new ConsoleDef("pty", null, null, (short) 0);
         devices.addDevice(console);
 
-        if (guest.getGuestType() != GuestDef.guestType.LXC) {
-            GraphicDef grap = new GraphicDef("vnc", (short) 0, true, vmTO.getVncAddr(), null,
-                    null);
-            devices.addDevice(grap);
+        GraphicDef grap = new GraphicDef("vnc", (short) 0, true, vmTO.getVncAddr(), null, null);
+        devices.addDevice(grap);
 
-            InputDef input = new InputDef("tablet", "usb");
-            devices.addDevice(input);
-        }
+        InputDef input = new InputDef("tablet", "usb");
+        devices.addDevice(input);
 
         vm.addComp(devices);
 
@@ -4050,9 +4048,11 @@ public class LibvirtComputingResource extends ServerResourceBase implements
     }
 
     private void cleanupVMNetworks(Connect conn, List<InterfaceDef> nics) {
-        for (InterfaceDef nic : nics) {
-            if (nic.getHostNetType() == hostNicType.VNET) {
-                cleanupVnet(conn, getVnetIdFromBrName(nic.getBrName()));
+        if (nics != null) {
+            for (InterfaceDef nic : nics) {
+                if (nic.getHostNetType() == hostNicType.VNET) {
+                    cleanupVnet(conn, getVnetIdFromBrName(nic.getBrName()));
+                }
             }
         }
     }
@@ -4366,7 +4366,7 @@ public class LibvirtComputingResource extends ServerResourceBase implements
         cmd.add("--vmmac", mac);
         cmd.add("--vif", vif);
         cmd.add("--brname", brname);
-        if (rules != null) {
+        if (newRules != null && !newRules.isEmpty()) {
             cmd.add("--rules", newRules);
         }
         String result = cmd.execute();
