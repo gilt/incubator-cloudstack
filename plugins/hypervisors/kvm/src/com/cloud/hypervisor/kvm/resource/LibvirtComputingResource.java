@@ -576,11 +576,7 @@ public class LibvirtComputingResource extends ServerResourceBase implements
 
         _hypervisorURI = (String) params.get("hypervisor.uri");
         if (_hypervisorURI == null) {
-            if (HypervisorType.LXC == _hypervisorType) {
-                _hypervisorURI = "lxc:///";
-            } else {
-                _hypervisorURI = "qemu:///system";
-            }
+            _hypervisorURI = LibvirtConnection.getHypervisorURI(_hypervisorType.toString());
         }
 
         String startMac = (String) params.get("private.macaddr.start");
@@ -2680,7 +2676,7 @@ public class LibvirtComputingResource extends ServerResourceBase implements
             _vms.put(vmName, State.Stopping);
         }
         try {
-            Connect conn = LibvirtConnection.getConnection();
+            Connect conn = LibvirtConnection.getConnectionByType(cmd.getContextParam(Command.HYPERVISOR_TYPE));
 
             List<DiskDef> disks = getDisks(conn, vmName);
             List<InterfaceDef> ifaces = getInterfaces(conn, vmName);
@@ -2806,7 +2802,6 @@ public class LibvirtComputingResource extends ServerResourceBase implements
 
     protected LibvirtVMDef createVMFromSpec(VirtualMachineTO vmTO) {
         LibvirtVMDef vm = new LibvirtVMDef();
-        vm.setHvsType(_hypervisorType.toString().toLowerCase());
         vm.setDomainName(vmTO.getName());
         vm.setDomUUID(UUID.nameUUIDFromBytes(vmTO.getName().getBytes())
                 .toString());
@@ -2814,10 +2809,14 @@ public class LibvirtComputingResource extends ServerResourceBase implements
 
         GuestDef guest = new GuestDef();
 
-        if (HypervisorType.LXC == _hypervisorType) {
+        if (HypervisorType.LXC == _hypervisorType &&
+            VirtualMachine.Type.User == vmTO.getType()) {
+            // LXC domain is only valid for user VMs. Use KVM for system VMs.
             guest.setGuestType(GuestDef.guestType.LXC);
+            vm.setHvsType(HypervisorType.LXC.toString().toLowerCase());
         } else {
             guest.setGuestType(GuestDef.guestType.KVM);
+            vm.setHvsType(HypervisorType.KVM.toString().toLowerCase());
         }
         guest.setGuestArch(vmTO.getArch());
         guest.setMachineType("pc");
@@ -2911,12 +2910,13 @@ public class LibvirtComputingResource extends ServerResourceBase implements
         State state = State.Stopped;
         Connect conn = null;
         try {
-            conn = LibvirtConnection.getConnection();
             synchronized (_vms) {
                 _vms.put(vmName, State.Starting);
             }
 
             vm = createVMFromSpec(vmSpec);
+
+            conn = LibvirtConnection.getConnectionByType(vm.getHvsType());
 
             createVbd(conn, vmSpec, vmName, vm);
 
@@ -3581,16 +3581,30 @@ public class LibvirtComputingResource extends ServerResourceBase implements
 
     private HashMap<String, State> getAllVms() {
         final HashMap<String, State> vmStates = new HashMap<String, State>();
+        Connect conn = null;
+
+        try {
+            conn = LibvirtConnection.getConnectionByType(HypervisorType.LXC.toString());
+            vmStates.putAll(getAllVms(conn));
+        } catch (LibvirtException e) {
+            s_logger.debug("Failed to get connection: " + e.getMessage());
+        }
+
+        try {
+            conn = LibvirtConnection.getConnectionByType(HypervisorType.KVM.toString());
+            vmStates.putAll(getAllVms(conn));
+        } catch (LibvirtException e) {
+            s_logger.debug("Failed to get connection: " + e.getMessage());
+        }
+
+        return vmStates;
+    }
+
+    private HashMap<String, State> getAllVms(Connect conn) {
+        final HashMap<String, State> vmStates = new HashMap<String, State>();
 
         String[] vms = null;
         int[] ids = null;
-        Connect conn = null;
-        try {
-            conn = LibvirtConnection.getConnection();
-        } catch (LibvirtException e) {
-            s_logger.debug("Failed to get connection: " + e.getMessage());
-            return vmStates;
-        }
 
         try {
             ids = conn.listDomains();

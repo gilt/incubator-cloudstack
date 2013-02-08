@@ -904,6 +904,10 @@ public class LibvirtVMDef {
         _hvsType = hvs;
     }
 
+    public String getHvsType() {
+        return _hvsType;
+    }
+
     public void setDomainName(String domainName) {
         _domName = domainName;
     }

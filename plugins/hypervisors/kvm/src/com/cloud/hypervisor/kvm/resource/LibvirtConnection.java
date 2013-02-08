@@ -20,29 +20,54 @@ import org.apache.log4j.Logger;
 import org.libvirt.Connect;
 import org.libvirt.LibvirtException;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class LibvirtConnection {
     private static final Logger s_logger = Logger
             .getLogger(LibvirtConnection.class);
+    static private Map<String, Connect> _connections = new HashMap<String, Connect>();
+
     static private Connect _connection;
     static private String _hypervisorURI;
 
     static public Connect getConnection() throws LibvirtException {
-        if (_connection == null) {
-            _connection = new Connect(_hypervisorURI, false);
+        return getConnection(_hypervisorURI);
+    }
+
+    static public Connect getConnection(String hypervisorURI) throws LibvirtException {
+        Connect conn = _connections.get(hypervisorURI);
+
+        if (conn == null) {
+            conn = new Connect(hypervisorURI, false);
+            _connections.put(hypervisorURI, conn);
         } else {
             try {
-                _connection.getVersion();
+                conn.getVersion();
             } catch (LibvirtException e) {
                 s_logger.debug("Connection with libvirtd is broken, due to "
                         + e.getMessage());
-                _connection = new Connect(_hypervisorURI, false);
+                conn = new Connect(hypervisorURI, false);
+                _connections.put(hypervisorURI, conn);
             }
         }
 
-        return _connection;
+        return conn;
+    }
+
+    static public Connect getConnectionByType(String hypervisorType) throws LibvirtException {
+        return getConnection(getHypervisorURI(hypervisorType));
     }
 
     static void initialize(String hypervisorURI) {
         _hypervisorURI = hypervisorURI;
+    }
+
+    static String getHypervisorURI(String hypervisorType) {
+        if ("LXC".equalsIgnoreCase(hypervisorType)) {
+            return "lxc:///";
+        } else {
+            return "qemu:///system";
+        }
     }
 }

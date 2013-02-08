@@ -39,11 +39,10 @@ public class StopCommand extends RebootCommand {
         this.vnet = vnet;
     }
     
-    public StopCommand(VirtualMachine vm, String vmName, String vnet) {
-        super(vmName);
-        this.vnet = vnet;
+    public StopCommand(VirtualMachine vm) {
+        super(vm);
     }
-    
+
     public StopCommand(String vmName) {
         super(vmName);
     }

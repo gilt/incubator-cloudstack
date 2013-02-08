@@ -26,6 +26,7 @@ public class RebootCommand extends Command {
     
     public RebootCommand(VirtualMachine vm) {
         vmName = vm.getInstanceName();
+        super.setContextParam(HYPERVISOR_TYPE, vm.getHypervisorType().toString());
     }
     
     public RebootCommand(String vmName) {
