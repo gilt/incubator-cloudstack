@@ -317,6 +317,7 @@ public class LibvirtComputingResource extends ServerResourceBase implements
     protected HypervisorType _hypervisorType;
     protected String _hypervisorURI;
     protected String _hypervisorPath;
+    protected String _networkDirectSourceMode;
     protected String _sysvmISOPath;
     protected String _privNwName;
     protected String _privBridgeName;
@@ -577,6 +578,11 @@ public class LibvirtComputingResource extends ServerResourceBase implements
         _hypervisorURI = (String) params.get("hypervisor.uri");
         if (_hypervisorURI == null) {
             _hypervisorURI = LibvirtConnection.getHypervisorURI(_hypervisorType.toString());
+        }
+
+        _networkDirectSourceMode = (String) params.get("network.direct.source.mode");
+        if (_networkDirectSourceMode == null) {
+            _networkDirectSourceMode = "bridge";
         }
 
         String startMac = (String) params.get("private.macaddr.start");

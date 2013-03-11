@@ -638,7 +638,7 @@ public class LibvirtVMDef {
 
     public static class InterfaceDef {
         enum guestNetType {
-            BRIDGE("bridge"), NETWORK("network"), USER("user"), ETHERNET(
+            BRIDGE("bridge"), DIRECT("direct"), NETWORK("network"), USER("user"), ETHERNET(
                     "ethernet"), INTERNAL("internal");
             String _type;
 
@@ -676,6 +676,7 @@ public class LibvirtVMDef {
                                          * internal
                                          */
         private hostNicType _hostNetType; /* Only used by agent java code */
+        private String _netSourceMode;
         private String _sourceName;
         private String _networkName;
         private String _macAddr;
@@ -688,6 +689,16 @@ public class LibvirtVMDef {
             _netType = guestNetType.BRIDGE;
             _sourceName = brName;
             _networkName = targetBrName;
+            _macAddr = macAddr;
+            _model = model;
+        }
+
+        public void defDirectNet(String sourceName, String targetName,
+                                 String macAddr, nicModel model, String sourceMode) {
+            _netType = guestNetType.DIRECT;
+            _netSourceMode = sourceMode;
+            _sourceName = sourceName;
+            _networkName = targetName;
             _macAddr = macAddr;
             _model = model;
         }
@@ -724,6 +735,10 @@ public class LibvirtVMDef {
             return _netType;
         }
 
+        public String getNetSourceMode() {
+            return _netSourceMode;
+        }
+
         public String getDevName() {
             return _networkName;
         }
@@ -740,6 +755,8 @@ public class LibvirtVMDef {
                 netBuilder.append("<source bridge='" + _sourceName + "'/>\n");
             } else if (_netType == guestNetType.NETWORK) {
                 netBuilder.append("<source network='" + _sourceName + "'/>\n");
+            } else if (_netType == guestNetType.DIRECT) {
+                netBuilder.append("<source dev='" + _sourceName + "' mode='" + _netSourceMode + "'/>\n");
             }
             if (_networkName != null) {
                 netBuilder.append("<target dev='" + _networkName + "'/>\n");
