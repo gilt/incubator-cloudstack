@@ -47,12 +47,12 @@ public class DirectVifDriver extends VifDriverBase {
         LibvirtVMDef.InterfaceDef intf = new LibvirtVMDef.InterfaceDef();
 
         if (nic.getType() == Networks.TrafficType.Guest) {
-            intf.defDirectNet(_pifs.get("private"), null, nic.getMac(), getGuestNicModel(guestOsType),
-                    _libvirtComputingResource._networkDirectSourceMode);
+            intf.defDirectNet(_libvirtComputingResource.getNetworkDirectDevice(), null, nic.getMac(), getGuestNicModel(guestOsType),
+                    _libvirtComputingResource.getNetworkDirectSourceMode());
 
         } else if (nic.getType() == Networks.TrafficType.Public) {
-            intf.defDirectNet(_pifs.get("public"), null, nic.getMac(), getGuestNicModel(guestOsType),
-                    _libvirtComputingResource._networkDirectSourceMode);
+            intf.defDirectNet(_libvirtComputingResource.getNetworkDirectDevice(), null, nic.getMac(), getGuestNicModel(guestOsType),
+                    _libvirtComputingResource.getNetworkDirectSourceMode());
         }
 
         return intf;

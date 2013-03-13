@@ -318,6 +318,7 @@ public class LibvirtComputingResource extends ServerResourceBase implements
     protected String _hypervisorURI;
     protected String _hypervisorPath;
     protected String _networkDirectSourceMode;
+    protected String _networkDirectDevice;
     protected String _sysvmISOPath;
     protected String _privNwName;
     protected String _privBridgeName;
@@ -382,6 +383,7 @@ public class LibvirtComputingResource extends ServerResourceBase implements
 
     private Map<String, Object> getDeveloperProperties()
             throws ConfigurationException {
+
         final File file = PropertiesUtil.findConfigFile("developer.properties");
         if (file == null) {
             throw new ConfigurationException(
@@ -435,6 +437,14 @@ public class LibvirtComputingResource extends ServerResourceBase implements
 
     protected String getDefaultDomrScriptsDir() {
         return "scripts/network/domr/kvm";
+    }
+
+    protected String getNetworkDirectSourceMode() {
+        return _networkDirectSourceMode;
+    }
+
+    protected String getNetworkDirectDevice() {
+        return _networkDirectDevice;
     }
 
     @Override
@@ -581,9 +591,7 @@ public class LibvirtComputingResource extends ServerResourceBase implements
         }
 
         _networkDirectSourceMode = (String) params.get("network.direct.source.mode");
-        if (_networkDirectSourceMode == null) {
-            _networkDirectSourceMode = "bridge";
-        }
+        _networkDirectDevice = (String) params.get("network.direct.device");
 
         String startMac = (String) params.get("private.macaddr.start");
         if (startMac == null) {
