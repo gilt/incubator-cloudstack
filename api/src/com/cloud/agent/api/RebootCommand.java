@@ -16,6 +16,7 @@
 // under the License.
 package com.cloud.agent.api;
 
+import com.cloud.hypervisor.Hypervisor;
 import com.cloud.vm.VirtualMachine;
 
 public class RebootCommand extends Command {
@@ -26,6 +27,13 @@ public class RebootCommand extends Command {
 
     public RebootCommand(VirtualMachine vm) {
         vmName = vm.getInstanceName();
+        if (vm.getHypervisorType() == Hypervisor.HypervisorType.LXC &&
+            vm.getType() != VirtualMachine.Type.User) {
+            // for system vms in the lxc cluster, set as kvm for libvirt connections
+            super.setContextParam(HYPERVISOR_TYPE, Hypervisor.HypervisorType.KVM.toString());
+        } else {
+          super.setContextParam(HYPERVISOR_TYPE, vm.getHypervisorType().toString());
+        }
     }
 
     public RebootCommand(String vmName) {

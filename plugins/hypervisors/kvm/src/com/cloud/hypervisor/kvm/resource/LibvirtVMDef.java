@@ -31,7 +31,7 @@ public class LibvirtVMDef {
 
     public static class GuestDef {
         enum guestType {
-            KVM, XEN, EXE
+            KVM, XEN, EXE, LXC
         }
 
         enum bootOrder {
@@ -60,6 +60,10 @@ public class LibvirtVMDef {
 
         public void setGuestType(guestType type) {
             _type = type;
+        }
+
+        public guestType getGuestType() {
+            return _type;
         }
 
         public void setGuestArch(String arch) {
@@ -106,8 +110,16 @@ public class LibvirtVMDef {
                 }
                 guestDef.append("</os>\n");
                 return guestDef.toString();
-            } else
+            } else if (_type == guestType.LXC) {
+                StringBuilder guestDef = new StringBuilder();
+                guestDef.append("<os>\n");
+                guestDef.append("<type>exe</type>\n");
+                guestDef.append("<init>/sbin/init</init>\n");
+                guestDef.append("</os>\n");
+                return guestDef.toString();
+             } else {
                 return null;
+            }
         }
     }
 
@@ -279,6 +291,8 @@ public class LibvirtVMDef {
 
     public static class DevicesDef {
         private String _emulator;
+        private String _rootFilesystemPath;
+        private GuestDef.guestType _guestType;
         private final Map<String, List<?>> devices = new HashMap<String, List<?>>();
 
         public boolean addDevice(Object device) {
@@ -298,6 +312,14 @@ public class LibvirtVMDef {
             _emulator = emulator;
         }
 
+        public void setRootFilesystemPath(String rootFilesystemPath) {
+            _rootFilesystemPath = rootFilesystemPath;
+        }
+
+        public void setGuestType(GuestDef.guestType guestType) {
+            _guestType = guestType;
+        }
+
         @Override
         public String toString() {
             StringBuilder devicesBuilder = new StringBuilder();
@@ -307,8 +329,22 @@ public class LibvirtVMDef {
                         + "</emulator>\n");
             }
 
+            if (_rootFilesystemPath != null) {
+                devicesBuilder.append("<filesystem type='mount'>\n");
+                devicesBuilder.append("  <source dir='" + _rootFilesystemPath + "'/>\n");
+                devicesBuilder.append("  <target dir='/'/>\n");
+                devicesBuilder.append("</filesystem>\n");
+            }
+
             for (List<?> devs : devices.values()) {
                 for (Object dev : devs) {
+                    if (_guestType == GuestDef.guestType.LXC) {
+                        if (dev instanceof GraphicDef ||
+                            dev instanceof InputDef ||
+                            dev instanceof DiskDef) {
+                            continue;
+                        }
+                    }
                     devicesBuilder.append(dev.toString());
                 }
             }
@@ -610,7 +646,7 @@ public class LibvirtVMDef {
 
     public static class InterfaceDef {
         enum guestNetType {
-            BRIDGE("bridge"), NETWORK("network"), USER("user"), ETHERNET(
+            BRIDGE("bridge"), DIRECT("direct"), NETWORK("network"), USER("user"), ETHERNET(
                     "ethernet"), INTERNAL("internal");
             String _type;
 
@@ -648,6 +684,7 @@ public class LibvirtVMDef {
                                          * internal
                                          */
         private hostNicType _hostNetType; /* Only used by agent java code */
+        private String _netSourceMode;
         private String _sourceName;
         private String _networkName;
         private String _macAddr;
@@ -663,6 +700,16 @@ public class LibvirtVMDef {
             _netType = guestNetType.BRIDGE;
             _sourceName = brName;
             _networkName = targetBrName;
+            _macAddr = macAddr;
+            _model = model;
+        }
+
+        public void defDirectNet(String sourceName, String targetName,
+                                 String macAddr, nicModel model, String sourceMode) {
+            _netType = guestNetType.DIRECT;
+            _netSourceMode = sourceMode;
+            _sourceName = sourceName;
+            _networkName = targetName;
             _macAddr = macAddr;
             _model = model;
         }
@@ -697,6 +744,10 @@ public class LibvirtVMDef {
 
         public guestNetType getNetType() {
             return _netType;
+        }
+
+        public String getNetSourceMode() {
+            return _netSourceMode;
         }
 
         public String getDevName() {
@@ -739,6 +790,8 @@ public class LibvirtVMDef {
                 netBuilder.append("<source bridge='" + _sourceName + "'/>\n");
             } else if (_netType == guestNetType.NETWORK) {
                 netBuilder.append("<source network='" + _sourceName + "'/>\n");
+            } else if (_netType == guestNetType.DIRECT) {
+                netBuilder.append("<source dev='" + _sourceName + "' mode='" + _netSourceMode + "'/>\n");
             }
             if (_networkName != null) {
                 netBuilder.append("<target dev='" + _networkName + "'/>\n");
@@ -936,6 +989,10 @@ public class LibvirtVMDef {
 
     public void setHvsType(String hvs) {
         _hvsType = hvs;
+    }
+
+    public String getHvsType() {
+        return _hvsType;
     }
 
     public void setDomainName(String domainName) {

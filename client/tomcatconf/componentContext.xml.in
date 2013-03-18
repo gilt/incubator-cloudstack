@@ -218,6 +218,10 @@
     <property name="name" value="Ovm Discover"/>
   </bean>
 
+  <bean id="LxcDiscoverer" class="com.cloud.hypervisor.kvm.discoverer.LxcServerDiscoverer">
+    <property name="name" value="Lxc Discover"/>
+  </bean>
+
   <bean id="FirstFitPlanner" class="com.cloud.deploy.FirstFitPlanner">
     <property name="name" value="First Fit"/>
   </bean>
@@ -310,6 +314,10 @@
 
   <bean id="BaremetalGuru" class="com.cloud.baremetal.manager.BareMetalGuru">
     <property name="name" value="BaremetalGuru"/>
+  </bean>
+
+  <bean id="LXCGuru" class="com.cloud.hypervisor.LXCGuru">
+    <property name="name" value="LXCGuru"/>
   </bean>
   
 </beans>

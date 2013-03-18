@@ -23,14 +23,11 @@ import org.apache.log4j.Logger;
 import javax.ejb.Local;
 
 @Local(value=Discoverer.class)
-public class KvmServerDiscoverer extends LibvirtServerDiscoverer {
-    private static final Logger s_logger = Logger.getLogger(KvmServerDiscoverer.class);
+public class LxcServerDiscoverer extends LibvirtServerDiscoverer {
+    private static final Logger s_logger = Logger.getLogger(LxcServerDiscoverer.class);
 
     public Hypervisor.HypervisorType getHypervisorType() {
-        return Hypervisor.HypervisorType.KVM;
+        return Hypervisor.HypervisorType.LXC;
     }
 
-    protected String getPatchPath() {
-        return "scripts/vm/hypervisor/kvm/";
-    }
 }
