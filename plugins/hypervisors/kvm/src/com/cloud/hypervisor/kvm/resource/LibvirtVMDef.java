@@ -1044,6 +1044,25 @@ public class LibvirtVMDef {
         }
     }
 
+    public static class HostdevCharDef {
+        private final String _devicePath;
+
+        public HostdevCharDef(String devicePath) {
+            _devicePath = devicePath;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder fsBuilder = new StringBuilder();
+            fsBuilder.append("<hostdev mode='capabilities' type='misc'>\n");
+            fsBuilder.append("  <source>\n");
+            fsBuilder.append("    <char>" + _devicePath + "</char>\n");
+            fsBuilder.append("  </source>\n");
+            fsBuilder.append("</hostdev>\n");
+            return fsBuilder.toString();
+        }
+    }
+
     public void setHvsType(String hvs) {
         _hvsType = hvs;
     }

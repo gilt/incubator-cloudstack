@@ -195,6 +195,7 @@ import com.cloud.hypervisor.kvm.resource.LibvirtVMDef.FilesystemDef;
 import com.cloud.hypervisor.kvm.resource.LibvirtVMDef.GraphicDef;
 import com.cloud.hypervisor.kvm.resource.LibvirtVMDef.GuestDef;
 import com.cloud.hypervisor.kvm.resource.LibvirtVMDef.GuestResourceDef;
+import com.cloud.hypervisor.kvm.resource.LibvirtVMDef.HostdevCharDef;
 import com.cloud.hypervisor.kvm.resource.LibvirtVMDef.InputDef;
 import com.cloud.hypervisor.kvm.resource.LibvirtVMDef.InterfaceDef;
 import com.cloud.hypervisor.kvm.resource.LibvirtVMDef.InterfaceDef.hostNicType;
@@ -3318,6 +3319,13 @@ ServerResource {
 
         InputDef input = new InputDef("tablet", "usb");
         devices.addDevice(input);
+
+        // pass /dev/tty from host to LXC container
+        if (HypervisorType.LXC == _hypervisorType &&
+            VirtualMachine.Type.User == vmTO.getType()) {
+            HostdevCharDef devtty = new HostdevCharDef("/dev/tty");
+            devices.addDevice(devtty);
+        }
 
         vm.addComp(devices);
 
